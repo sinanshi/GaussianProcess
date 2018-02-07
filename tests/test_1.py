@@ -1,4 +1,5 @@
 from gp_emulator import GaussianProcess
+import gpugp
 from numpy import random as random
 import numpy as np
 import pytest
@@ -48,7 +49,7 @@ def test_rosenrock():
 
 
 def test_rosenrock_gp(): 
-    size = 1000
+    size = 100
     d = 10
     train_x = random.uniform(-5, 10, d * size).reshape(size, d)
     train_y = np.apply_along_axis(rosenrock, 1, train_x)
@@ -58,33 +59,71 @@ def test_rosenrock_gp():
 #    print(train_y)
 
     gp = GaussianProcess.GaussianProcess(train_x, train_y)
-    
+#    
     import cProfile, pstats
     from io import StringIO
     pr = cProfile.Profile()
     pr.enable()
-    gp.learn_hyperparameters(n_tries=15)
+    gp.learn_hyperparameters(n_tries=1)
     pr.disable()
     s = StringIO()
-    sortby = 'cumulative'
-    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
-    ps.print_stats()
-    print(s.getvalue())
 
+    print(gp.Q.shape)
+    print(gp.targets.shape)
+#    sortby = 'cumulative'
+#    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+#    ps.print_stats()
+#    print(s.getvalue())
+#
+#
+#
+#    size = 100
+#    target_x = random.uniform(-5, 10, d * size).reshape(size, d)
+#    target_y = np.apply_along_axis(rosenrock, 1, target_x)
+#
+##    target_x = train_x
+##    target_y = train_y
+#    pred_y, pred_var, par_dev = gp.predict(target_x)
+#    print(target_y)
+#    print(pred_y)
+#    print(np.mean(np.abs((pred_y - target_y) / target_y)))
 
-
-    size = 100
-    target_x = random.uniform(-5, 10, d * size).reshape(size, d)
-    target_y = np.apply_along_axis(rosenrock, 1, target_x)
-
-#    target_x = train_x
-#    target_y = train_y
-    pred_y, pred_var, par_dev = gp.predict(target_x)
-    print(target_y)
-    print(pred_y)
-    print(np.mean(np.abs((pred_y - target_y) / target_y)))
-
-
-
+#def test_gpu():
+#    arr = np.array([1,2,2,2, 2, 4], dtype=np.int32)
+#    adder = gpuadder.GPUAdder(arr)
+#    adder.increment()
+#
+#    adder.retreive_inplace()
+#    results2 = adder.retreive()
+#    print(results2)
 #def test_rosenrock_gp():
 
+
+def test_gpu2():
+    import gpugp
+    N = 100
+    like=gpugp.pygpulike(np.eye(N))
+    A = np.eye(N, dtype=np.float32)
+    A[1, 0] = 1.11
+    A[2, 1] = 8.32
+    A[3, 2] = 5.34
+
+    print(A)
+    A = np.dot(A, A.T)
+    print("A init: ")
+    print(A)
+
+    print("cpu:")
+    L1 = np.linalg.cholesky(A)
+
+    print("L1: ")
+    print(L1)
+
+    print("gpu:")
+    L=like.cholesky(A, 
+                  np.zeros(N, dtype=np.float32))
+    print("L: ")
+    print(L)
+
+    print("A: ")
+    print(A)
