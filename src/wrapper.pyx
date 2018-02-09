@@ -3,52 +3,43 @@ cimport numpy as np
 
 assert sizeof(int) == sizeof(np.int32_t)
 
-cdef extern from "manager.hh":
-    cdef cppclass C_GPUAdder "GPUAdder":
-        C_GPUAdder(np.int32_t*, int)
-        void increment()
-        void retreive()
-        void retreive_to(np.int32_t*, int)
-
-cdef class GPUAdder:
-    cdef C_GPUAdder* g
-    cdef int dim1
-
-    def __cinit__(self, np.ndarray[ndim=1, dtype=np.int32_t] arr):
-        self.dim1 = len(arr)
-        self.g = new C_GPUAdder(&arr[0], self.dim1)
-
-    def increment(self):
-        self.g.increment()
-
-    def retreive_inplace(self):
-        self.g.retreive()
-
-    def retreive(self):
-        cdef np.ndarray[ndim=1, dtype=np.int32_t] a = np.zeros(self.dim1, dtype=np.int32)
-        self.g.retreive_to(&a[0], self.dim1)
-        return a
-
 
 cdef extern from "manager.hh":
-    cdef cppclass GPULike :
-        GPULike(np.float64_t*) except+
-        void display()
-        void cholesky(np.float32_t *A, np.float32_t *b, int N);
+    cdef cppclass gpuPrepareLikelihood "gpuPrepareLikelihood" :
+        float* L
+#        np.ndarray[ndim=2, dtype=np.float32_t] L
+        int N
+#        np.ndarray[ndim=2, dtype=np.float32_t] L
+        gpuPrepareLikelihood(np.float32_t* Q, np.float32_t* targets, int N) except+
+        void gpu_cholesky();
 
 cdef class pygpulike:
     cdef gpuPrepareLikelihood* g
+    cdef int N
+#    cdef np.ndarray[ndim=2, dtype=np.float32_t] x
 
     def __cinit__(self, np.ndarray[ndim=2, dtype=np.float32_t] Q, 
-                  np.ndarray(ndim=1, dtype=np.float32_t) targets):
-        self.g = new gpuPrepareLikelihood(&arr[0, 0], &targets[0])
+                  np.ndarray[ndim=1, dtype=np.float32_t] targets):
+        self.N = len(Q)
+        self.g = new gpuPrepareLikelihood(&Q[0, 0], &targets[0], self.N)
 
 
-    def cholesky(self, np.ndarray[ndim=2, dtype=np.float32_t] A, 
-                 np.ndarray[ndim=1, dtype=np.float32_t] b):
-        N = len(A)
-        self.g.cholesky(&A[0, 0], &b[0], N)
-        return A
+    def cholesky(self): 
+        self.g.gpu_cholesky()
+        L = np.asarray(<np.float32_t[:self.N, :self.N]> self.g.L)
+        return(L.T)
+
+        #cdef np.ndarray[np.float32_t, ndim=2] pd_numpy = np.eye(self.N, dtype=np.float32)
+        #cdef float *pd = &self.g.L[0]
+        #return(pd_numpy)
+
+
+
+#        x = np.eye(self.g.N)
+#        x = &self.g.L[0, 0]
+
+ #       return(x)
+
 
 
 #import cython

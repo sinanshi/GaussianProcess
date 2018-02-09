@@ -108,15 +108,16 @@ except AttributeError:
 ext = Extension('gpugp',
                 sources=['src/manager.cu', 'src/wrapper.pyx'],
                 library_dirs=[CUDA['lib']],
-                libraries=['cudart', 'cusolver'],
+                libraries=['cudart', 'magma'],
                 language='c++',
-                runtime_library_dirs=[CUDA['lib']],
+                runtime_library_dirs=[CUDA['lib'], "magma-2.3.0/lib"],
                 # this syntax is specific to this build system
                 # we're only going to use certain compiler args with nvcc and not with gcc
                 # the implementation of this trick is in customize_compiler() below
                 extra_compile_args={'gcc': [],
-                                    'nvcc': ['-arch=sm_30', '--ptxas-options=-v', '-c', '--compiler-options', "'-fPIC'"]},
-                include_dirs = [numpy_include, CUDA['include'], 'src'])
+                                    'nvcc': ['-arch=sm_30', '--ptxas-options=-v', '-c', 
+                                             '--compiler-options', "'-fPIC'"]},
+                include_dirs = [numpy_include, CUDA['include'], 'src', 'magma-2.3.0/include'])
 
 
 

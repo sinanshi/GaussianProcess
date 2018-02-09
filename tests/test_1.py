@@ -48,28 +48,27 @@ def test_rosenrock():
 
 
 
-def test_rosenrock_gp(): 
-    size = 100
-    d = 10
-    train_x = random.uniform(-5, 10, d * size).reshape(size, d)
-    train_y = np.apply_along_axis(rosenrock, 1, train_x)
-#    print(train_y.mean())
-#    print(train_y.std())
-#    train_y = (train_y - train_y.mean())/ train_y.std() 
-#    print(train_y)
+def test_rosenrock_gp():
+    pass
+#    size = 100
+#    d = 10
+#    train_x = random.uniform(-5, 10, d * size).reshape(size, d)
+#    train_y = np.apply_along_axis(rosenrock, 1, train_x)
+##    print(train_y.mean())
+##    print(train_y.std())
+##    train_y = (train_y - train_y.mean())/ train_y.std() 
+##    print(train_y)
+#
+#    gp = GaussianProcess.GaussianProcess(train_x, train_y)
+##    
+#    import cProfile, pstats
+#    from io import StringIO
+#    pr = cProfile.Profile()
+#    pr.enable()
+#    gp.learn_hyperparameters(n_tries=1)
+#    pr.disable()
+#    s = StringIO()
 
-    gp = GaussianProcess.GaussianProcess(train_x, train_y)
-#    
-    import cProfile, pstats
-    from io import StringIO
-    pr = cProfile.Profile()
-    pr.enable()
-    gp.learn_hyperparameters(n_tries=1)
-    pr.disable()
-    s = StringIO()
-
-    print(gp.Q.shape)
-    print(gp.targets.shape)
 #    sortby = 'cumulative'
 #    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
 #    ps.print_stats()
@@ -101,29 +100,46 @@ def test_rosenrock_gp():
 
 def test_gpu2():
     import gpugp
-    N = 100
-    like=gpugp.pygpulike(np.eye(N))
-    A = np.eye(N, dtype=np.float32)
-    A[1, 0] = 1.11
-    A[2, 1] = 8.32
-    A[3, 2] = 5.34
+    N = 5
+    A = np.eye(N, dtype=np.float32, order="C")
+    A[1][0] = 2
+    A[2][1] = 2
+    A[3][1] = 4
+    A[0][0] = 9
 
     print(A)
+
     A = np.dot(A, A.T)
-    print("A init: ")
+
+
     print(A)
+    targets = np.ones(N, dtype=np.float32)
+    like=gpugp.pygpulike(A, targets)
 
-    print("cpu:")
-    L1 = np.linalg.cholesky(A)
+    print(like.cholesky())
+#    L = np.linalg.cholesky(A)
+#    invL = np.linalg.inv(L)
+#    print(np.linalg.inv(A))
+    #A[1, 0] = 1.11
+    #A[2, 1] = 8.32
+    #A[3, 2] = 5.34
 
-    print("L1: ")
-    print(L1)
+    #print(A)
+    #A = np.dot(A, A.T)
+    #print("A init: ")
+    #print(A)
 
-    print("gpu:")
-    L=like.cholesky(A, 
-                  np.zeros(N, dtype=np.float32))
-    print("L: ")
-    print(L)
+    #print("cpu:")
+    #L1 = np.linalg.cholesky(A)
 
-    print("A: ")
-    print(A)
+    #print("L1: ")
+    #print(L1)
+
+    #print("gpu:")
+    #L=like.cholesky(A, 
+    #              np.zeros(N, dtype=np.float32))
+    #print("L: ")
+    #print(L)
+
+    #print("A: ")
+    #print(A)

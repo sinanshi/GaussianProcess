@@ -1,109 +1,90 @@
-/*
-This is the central piece of code. This file implements a class
-(interface in gpuadder.hh) that takes data in on the cpu side, copies
-it to the gpu, and exposes functions (increment and retreive) that let
-you perform actions with the GPU
-
-This class will get translated into python via swig
-*/
-
 #include <kernel.cu>
 #include <manager.hh>
 
-gpuPrepareLikelihood::gpuPrepareLikelihood(float *Q_, float *targets_, int N) {
-      cudaStatus = cudaGetDevice(0);
-      cusolverStatus = cusolverDnCreate(&handle);
-      cublasFillMode_t uplo = CUBLAS_FILL_MODE_LOWER;
+gpuPrepareLikelihood::gpuPrepareLikelihood(float *Q_, float *targets_, int N_) {
+  //! initialise the input by pointing to the numpy 
+  //! array passed into the wrapper. 
+  Q = Q_;
+  targets = targets_;
+  N = N_; 
 
-      Q = (float *)malloc(sizeof(float) * N * N);
-      targets = (float *)malloc(sizeof(float) * N);
+  //! initialise magma
+  magma_init(); 
+  magma_int_t dev = 0;
+  magma_queue_create(dev, &queue);
 
-      Q = Q_; // point to Q
-      targets = targets_;
+//  magma_smalloc_cpu(&invQ, N * N);
+//  magma_smalloc_cpu(&invQt, N);
+//  magma_smalloc_cpu(logdetQ)
+  
+//  magma_smalloc_cpu(&targets, N * N); 
+  magma_smalloc_cpu(&L, N * N); 
+  magma_smalloc(&dev_Q, N * N);
 
-      cudaStatus = cudaMalloc((void **) &d_Q, N * N * sizeof(float));
-      cudaStatus = cudaMalloc((void **) &d_targets, N * sizeof(float));
-//      cudaStatus = cudaMalloc((void **) &d_invQ, N * sizeof(float));
-//      cudaStatus = cudaMalloc((void **) &d_info, sizeof(int));
-      cudaStatus = cudaMemcpy(d_Q, Q, N * N * sizeof(float), cudaMemcpyHostToDevice); 
-      cudaStatus = cudaMemcpy(d_targets, targets, N * sizeof(float), cudaMemcpyHostToDevice); 
+  magma_smalloc_cpu(&invQt, N);
+
+
+  
+//  magma_smalloc(&dev_targets, N * N);
+//  magma_ssetmatrix(N, N, Q, N, dev_Q, N, queue);
+//  magma_ssetmatrix(N, 1, targets, N, dev_Q, N, queue);
+
+
+
+
 }
+
 
 
 gpuPrepareLikelihood::~gpuPrepareLikelihood(){
 
-//  cudaStatus = cudaDeviceSynchronize(); // should be used for the timing.
-  cudaStatus = cudaFree(dev_L);
-  cudaStatus = cudaFree(d_invQ);
-  cudaStatus = cudaFree(d_invQt);
-  cusolverStatus = cusolverDnDestroy(handle);
-  cudaStatus = cudaDeviceReset();
-  
-  cudaStatus = cudaFree(Work);
-  free(invQ);
-  free(invQt);
-  free(logdetQ);
+  //! finalize magam
+  magma_free(dev_Q);
+
+//  magma_free(dev_Q); 
+//  magma_free(dev_targets);
+
+  free(L);
+  magma_queue_destroy(queue);
+  magma_finalize(); 
+
+
+
 }
 
+__inline__ int ind(int r, int c, int n) {
+  return(r * n + c); 
+}
 
 void gpuPrepareLikelihood::gpu_cholesky() {
+  magma_ssetmatrix(N, N, Q, N, dev_Q, N, queue);
+  magma_spotrf_gpu(MagmaLower, N, dev_Q, N, &info);
 
-  int *d_info, Lwork; //device version of info, worksp.size
+  // have to write a kernel latter to avoid copyting
+  magma_sgetmatrix(N, N, dev_Q, N, L, N, queue);
+  for (int i = 0; i < N; ++i) {
+    for (int j = 0; j < N; ++j) {
+      if (j < i) L[ind(i, j, N)] = 0;
+    }
+  }
+  magma_ssetmatrix(N, N, L, N, dev_Q, N, queue);
 
-//  int info_gpu = 0;
+  
+  magma_strtri_gpu(MagmaLower, MagmaNonUnit, N, dev_Q, N, &info);
+  magma_slauum_gpu(MagmaLower, N, dev_Q, N, &info);// L^T L
+  
+  magma_sgetmatrix(N, N, dev_Q, N, L, N, queue); //invQ
 
-  cudaMalloc((void **) &d_info, sizeof(int));
+  for (int i = 0; i < N; ++i) {
+    for (int j = 0; j < N; ++j) {
+      L[ind(j, i, N)] = L[ind(i, j, N)];
+    }
+  }
 
-  // compute workspace size and prepare workspace
-  cusolverStatus = cusolverDnSpotrf_bufferSize(handle, uplo, N, d_Q, N, &Lwork);
-  cudaStatus = cudaMalloc((void**) &Work, Lwork * sizeof(float));
 
-  cusolverStatus = cusolverDnSpotrf(handle, uplo, N, d_Q, N, Work, Lwork, d_info);
-
-  cusolverStatus = cusolverDnSpotrs(handle, uplo, N, 1, d_Q, N, d_
-
-  cudaMemcpy(b, d_B, N * sizeof(float), cudaMemcpyDeviceToHost);
-  cudaMemcpy(A, d_A, N * N * sizeof(float), cudaMemcpyDeviceToHost);
+//  magma_sprint( 5, 5, Q, N);
+//  magma_sprint( 5, 5, L, N);
 
 }
 
 
-
-//GPUAdder::GPUAdder (int* array_host_, int length_) {
-//  array_host = array_host_;
-//  length = length_;
-//  int size = length * sizeof(int);
-//  cudaError_t err = cudaMalloc((void**) &array_device, size);
-//  assert(err == 0);
-//  err = cudaMemcpy(array_device, array_host, size, cudaMemcpyHostToDevice);
-//  assert(err == 0);
-//}
-//
-//void GPUAdder::increment() {
-//  kernel_add_one<<<64, 64>>>(array_device, length);
-//  cudaError_t err = cudaGetLastError();
-//  assert(err == 0);
-//}
-//
-//void GPUAdder::retreive() {
-//  int size = length * sizeof(int);
-//  cudaMemcpy(array_host, array_device, size, cudaMemcpyDeviceToHost);
-//  cudaError_t err = cudaGetLastError();
-//  if(err != 0) { cout << err << endl; assert(0); }
-//}
-//
-//void GPUAdder::retreive_to (int* array_host_, int length_) {
-//  assert(length == length_);
-//  int size = length * sizeof(int);
-//  cudaMemcpy(array_host_, array_device, size, cudaMemcpyDeviceToHost);
-//  cudaError_t err = cudaGetLastError();
-//  assert(err == 0);
-//}
-//
-//GPUAdder::~GPUAdder() {
-//  cudaFree(array_device);
-//}
-//
-//
-//
-//
