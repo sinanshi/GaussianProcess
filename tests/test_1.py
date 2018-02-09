@@ -99,7 +99,6 @@ def test_rosenrock_gp():
 
 
 def test_gpu2():
-    import gpugp
     N = 5
     A = np.eye(N, dtype=np.float32, order="C")
     A[1][0] = 2
@@ -113,33 +112,21 @@ def test_gpu2():
 
 
     print(A)
-    targets = np.ones(N, dtype=np.float32)
+#    targets = np.random.rand(N, dtype=np.float32)
+    targets = np.ones(N, dtype=np.float32) 
     like=gpugp.pygpulike(A, targets)
 
-    print(like.cholesky())
-#    L = np.linalg.cholesky(A)
-#    invL = np.linalg.inv(L)
-#    print(np.linalg.inv(A))
-    #A[1, 0] = 1.11
-    #A[2, 1] = 8.32
-    #A[3, 2] = 5.34
+    invQ, invQt, logdetQ = like.cholesky()
+    L = np.linalg.cholesky(A)
+    invL = np.linalg.inv(L)
+    print(invQ)
+    print(np.linalg.inv(A))
+    
+    print(np.linalg.inv(L.T).dot(np.linalg.inv(L)))
+    print(invQt)
+    print(np.dot(invQ, targets))
+    
+    print(2.0 * np.sum ( np.log ( np.diag ( L ))))
+    print(logdetQ)
 
-    #print(A)
-    #A = np.dot(A, A.T)
-    #print("A init: ")
-    #print(A)
 
-    #print("cpu:")
-    #L1 = np.linalg.cholesky(A)
-
-    #print("L1: ")
-    #print(L1)
-
-    #print("gpu:")
-    #L=like.cholesky(A, 
-    #              np.zeros(N, dtype=np.float32))
-    #print("L: ")
-    #print(L)
-
-    #print("A: ")
-    #print(A)

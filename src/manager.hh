@@ -9,29 +9,34 @@
 #include <iostream>
 using namespace std;
 
+#define GPREAL float
+
 class gpuPrepareLikelihood {
   private:
     magma_queue_t queue;
     magma_int_t err;
     magma_int_t info;
 
-    float *dev_Q; 
-    float *dev_targets;
+    GPREAL *dev_Q; 
+    GPREAL *dev_targets;
+    GPREAL *dev_invQt;
 
 
 
   public:
-    float *Q; //! input matrix
-    float *targets; //! input vector
-    float *invQ; //! the inverse matrix  (L^T)^-1(L)^-1
-    float *invQt;  //! the solution vector
-    //float *logdetQ; //! for posterior log likelihood.
+    GPREAL *Q; //! input matrix
+    GPREAL *targets; //! input vector
+    GPREAL *invQ; //! the inverse matrix  (L^T)^-1(L)^-1
+    GPREAL *invQt;  //! the solution vector
+    //GPREAL *logdetQ; //! for posterior log likelihood.
 
-    float *L; 
+//    GPREAL *L; 
     int N; //! dimention
 
+    GPREAL logdetQ;
+
     //! constructor - initialise CUDA handlers
-    gpuPrepareLikelihood(float *Q_, float *targets_, int N); 
+    gpuPrepareLikelihood(GPREAL *Q_, GPREAL *targets_, int N); 
     ~gpuPrepareLikelihood(); 
 
     void gpu_cholesky();

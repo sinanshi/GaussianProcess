@@ -1,89 +1,84 @@
 #include <kernel.cu>
 #include <manager.hh>
 
-gpuPrepareLikelihood::gpuPrepareLikelihood(float *Q_, float *targets_, int N_) {
+//! Convert the 1D index to 2D.
+__inline__ int ind(int r, int c, int n) {
+  return(r * n + c); 
+}
+
+
+gpuPrepareLikelihood::gpuPrepareLikelihood(GPREAL *Q_, GPREAL *targets_, int N_) {
   //! initialise the input by pointing to the numpy 
   //! array passed into the wrapper. 
   Q = Q_;
   targets = targets_;
-  N = N_; 
+  N = N_;
+  logdetQ = 0; 
 
   //! initialise magma
   magma_init(); 
   magma_int_t dev = 0;
   magma_queue_create(dev, &queue);
 
-//  magma_smalloc_cpu(&invQ, N * N);
-//  magma_smalloc_cpu(&invQt, N);
-//  magma_smalloc_cpu(logdetQ)
-  
-//  magma_smalloc_cpu(&targets, N * N); 
-  magma_smalloc_cpu(&L, N * N); 
-  magma_smalloc(&dev_Q, N * N);
-
+  magma_smalloc_cpu(&invQ, N * N); 
   magma_smalloc_cpu(&invQt, N);
-
-
   
-//  magma_smalloc(&dev_targets, N * N);
-//  magma_ssetmatrix(N, N, Q, N, dev_Q, N, queue);
-//  magma_ssetmatrix(N, 1, targets, N, dev_Q, N, queue);
-
-
-
+  magma_smalloc(&dev_Q, N * N);
+  magma_smalloc(&dev_targets, N);
+  magma_smalloc(&dev_invQt, N);
 
 }
 
 
 
 gpuPrepareLikelihood::~gpuPrepareLikelihood(){
-
-  //! finalize magam
+  //! free the memory
   magma_free(dev_Q);
+  magma_free(dev_targets);
 
-//  magma_free(dev_Q); 
-//  magma_free(dev_targets);
-
-  free(L);
+  free(invQ);
+  free(invQt);
+  free(targets);
+  //! finalize magam
   magma_queue_destroy(queue);
   magma_finalize(); 
-
-
-
 }
 
-__inline__ int ind(int r, int c, int n) {
-  return(r * n + c); 
-}
+
 
 void gpuPrepareLikelihood::gpu_cholesky() {
   magma_ssetmatrix(N, N, Q, N, dev_Q, N, queue);
   magma_spotrf_gpu(MagmaLower, N, dev_Q, N, &info);
 
   // have to write a kernel latter to avoid copyting
-  magma_sgetmatrix(N, N, dev_Q, N, L, N, queue);
+  //-------------------------------------------------
+  magma_sgetmatrix(N, N, dev_Q, N, invQ, N, queue);
   for (int i = 0; i < N; ++i) {
     for (int j = 0; j < N; ++j) {
-      if (j < i) L[ind(i, j, N)] = 0;
+      if (j < i) invQ[ind(i, j, N)] = 0;
+      if (i == j) logdetQ += 2.0 * log(invQ[ind(i, j, N)]);
     }
   }
-  magma_ssetmatrix(N, N, L, N, dev_Q, N, queue);
-
+  magma_ssetmatrix(N, N, invQ, N, dev_Q, N, queue);
+  //-------------------------------------------------
   
   magma_strtri_gpu(MagmaLower, MagmaNonUnit, N, dev_Q, N, &info);
   magma_slauum_gpu(MagmaLower, N, dev_Q, N, &info);// L^T L
   
-  magma_sgetmatrix(N, N, dev_Q, N, L, N, queue); //invQ
+  magma_sgetmatrix(N, N, dev_Q, N, invQ, N, queue); //invQ
 
+  // here maybe to kernels too? or maybe not?
   for (int i = 0; i < N; ++i) {
     for (int j = 0; j < N; ++j) {
-      L[ind(j, i, N)] = L[ind(i, j, N)];
+      invQ[ind(j, i, N)] = invQ[ind(i, j, N)];
     }
   }
 
-
-//  magma_sprint( 5, 5, Q, N);
-//  magma_sprint( 5, 5, L, N);
+  // calculate the solution of the tridiagnal system invQt
+  magma_ssetvector(N, targets, 1, dev_targets, 1, queue);
+  magma_ssymv(MagmaLower, N, 1, dev_Q, N, dev_targets, 1, 
+      0, dev_invQt, 1, queue);
+  magma_sgetvector(N, dev_invQt, 1, invQt, 1, queue);
 
 }
 

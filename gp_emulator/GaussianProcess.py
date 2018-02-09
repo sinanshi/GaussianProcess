@@ -3,6 +3,7 @@ import warnings
 import numpy as np
 import scipy.spatial.distance as dist
 import random
+import gpugp
 
 def k_fold_cross_validation(X, K, randomise = False):
     """
@@ -73,6 +74,28 @@ class GaussianProcess:
 
         self.logdetQ = 2.0 * np.sum ( np.log ( np.diag ( L )))
 
+    def gpu_prepare_likelihood ( self ):
+        """
+        This method precalculates matrices and stuff required for the i
+	log-likelihood maximisation routine, so that they can be
+        reused when calling the ``predict`` method repeatedly.
+        """
+        
+        # Exponentiate the hyperparameters
+        
+        exp_theta = np.exp ( self.theta )
+        # Calculation of the covariance matrix Q using theta
+        self.Z = np.zeros ( (self.n, self.n) )
+        for d in range( self.D ):
+            self.Z = self.Z + exp_theta[d]*\
+                            ((np.tile( self.inputs[:, d], (self.n, 1)) - \
+                              np.tile( self.inputs[:, d], (self.n, 1)).T))**2
+        self.Z = exp_theta[self.D]*np.exp ( -0.5*self.Z)
+        self.Q = self.Z +\
+            exp_theta[self.D+1]*np.eye ( self.n )
+
+        gpu_likelihood = gpugp.pygpulike(self.Q, self.targets)
+        self.invQ, self.invQt, self.logdetQ = gpu_likelihood.cholesky()
 
     def loglikelihood ( self, theta ):
         """Calculates the loglikelihood for a set of hyperparameters
