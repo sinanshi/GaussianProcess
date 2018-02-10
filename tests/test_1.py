@@ -49,23 +49,44 @@ def test_rosenrock():
 
 
 def test_rosenrock_gp():
-    pass
-#    size = 100
-#    d = 10
-#    train_x = random.uniform(-5, 10, d * size).reshape(size, d)
-#    train_y = np.apply_along_axis(rosenrock, 1, train_x)
-##    print(train_y.mean())
-##    print(train_y.std())
-##    train_y = (train_y - train_y.mean())/ train_y.std() 
-##    print(train_y)
-#
-#    gp = GaussianProcess.GaussianProcess(train_x, train_y)
-##    
+    size = 1000
+    d = 50
+    train_x = random.uniform(-5, 10, d * size).reshape(size, d)
+    train_y = np.apply_along_axis(rosenrock, 1, train_x)
+#    print(train_y.mean())
+#    print(train_y.std())
+    train_y = (train_y - train_y.mean())/ train_y.std() 
+    #    print(train_y)
+
+    gp = GaussianProcess.GaussianProcess(train_x, train_y)
+    #    
 #    import cProfile, pstats
 #    from io import StringIO
 #    pr = cProfile.Profile()
 #    pr.enable()
 #    gp.learn_hyperparameters(n_tries=1)
+
+    gp.learn_hyperparameters(n_tries=1, gpu=True)
+    gp.learn_hyperparameters(n_tries=1, gpu=True)
+
+
+    print("gpu")
+
+    for i in range(10):
+        gp._set_params(gp.theta, gpu=True)
+        sg = gp.invQt
+    print(sg[0:10])
+
+    print("cpu")
+
+    for i in range(10):
+        gp._set_params(gp.theta, gpu=False)
+        sc = gp.invQt
+
+    print(sc[0:10])
+
+
+#    gp.learn_hyperparameters(n_tries=1, gpu=True)
 #    pr.disable()
 #    s = StringIO()
 
@@ -73,30 +94,19 @@ def test_rosenrock_gp():
 #    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
 #    ps.print_stats()
 #    print(s.getvalue())
-#
-#
-#
+
+
+
 #    size = 100
 #    target_x = random.uniform(-5, 10, d * size).reshape(size, d)
 #    target_y = np.apply_along_axis(rosenrock, 1, target_x)
 #
 ##    target_x = train_x
 ##    target_y = train_y
-#    pred_y, pred_var, par_dev = gp.predict(target_x)
-#    print(target_y)
-#    print(pred_y)
-#    print(np.mean(np.abs((pred_y - target_y) / target_y)))
-
-#def test_gpu():
-#    arr = np.array([1,2,2,2, 2, 4], dtype=np.int32)
-#    adder = gpuadder.GPUAdder(arr)
-#    adder.increment()
-#
-#    adder.retreive_inplace()
-#    results2 = adder.retreive()
-#    print(results2)
-#def test_rosenrock_gp():
-
+#pred_y, pred_var, par_dev = gp.predict(target_x)
+#print(target_y)
+#print(pred_y)
+#print(np.mean(np.abs((pred_y - target_y) / target_y)))
 
 def test_gpu2():
     N = 5
@@ -128,5 +138,3 @@ def test_gpu2():
     
     print(2.0 * np.sum ( np.log ( np.diag ( L ))))
     print(logdetQ)
-
-

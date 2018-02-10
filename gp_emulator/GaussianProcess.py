@@ -94,10 +94,11 @@ class GaussianProcess:
         self.Q = self.Z +\
             exp_theta[self.D+1]*np.eye ( self.n )
 
-        gpu_likelihood = gpugp.pygpulike(self.Q, self.targets)
+        gpu_likelihood = gpugp.pygpulike(self.Q.astype(np.float32), 
+                                         np.array(self.targets).astype((np.float32)))
         self.invQ, self.invQt, self.logdetQ = gpu_likelihood.cholesky()
 
-    def loglikelihood ( self, theta ):
+    def loglikelihood ( self, theta, gpu=False):
         """Calculates the loglikelihood for a set of hyperparameters
         ``theta``. The size of ``theta`` is given by the dimensions of
 	the input vector to the model to be emulated.
@@ -107,7 +108,7 @@ class GaussianProcess:
 	theta: array
 		Hyperparameters
 	"""
-        self._set_params ( theta )
+        self._set_params ( theta, gpu)
         
         loglikelihood = 0.5*self.logdetQ + \
                         0.5*np.dot ( self.targets, self.invQt ) + \
@@ -146,7 +147,7 @@ class GaussianProcess:
                         np.exp( self.theta[self.D + 1])
         return partial_d
         
-    def _set_params ( self, theta ):
+    def _set_params ( self, theta, gpu=False ):
         """Sets the hyperparameters, and thus also precalculates terms
 	that depend on them. Since hyperparameters are fixed after
 	training, this speeds up some calculations.
@@ -158,9 +159,12 @@ class GaussianProcess:
 `	"""
         
         self.theta = theta
-        self._prepare_likelihood ( )
+        if gpu:
+            self.gpu_prepare_likelihood()
+        else:
+            self._prepare_likelihood ( )
         
-    def _learn ( self, theta0, verbose ):
+    def _learn ( self, theta0, verbose, gpu=False ):
         """The training method, called ''learn'' to keep up with the
 	trendy Machine Learning kids!
 	Takes an initial guess of the hyperparameters, and minimises 
@@ -180,7 +184,7 @@ class GaussianProcess:
         # minimise self.loglikelihood (with self.partial_devs) to learn
         # theta
         from scipy.optimize import fmin_cg,fmin_l_bfgs_b
-        self._set_params ( theta0 )
+        self._set_params ( theta0, gpu )
         if verbose:
             iprint = 1
         else:
@@ -202,7 +206,7 @@ class GaussianProcess:
             
         return theta_opt
 
-    def learn_hyperparameters ( self, n_tries=15, verbose=False ):
+    def learn_hyperparameters ( self, n_tries=15, verbose=False, gpu=False):
         """User method to fit the hyperparameters of the model, using
 	random initialisations of parameters. The user should provide
 	a number of tries (e.g. how many random starting points to
@@ -227,7 +231,7 @@ class GaussianProcess:
         log_like = np.array ( log_like )
         idx = np.argsort( log_like )[0]
         print("After %d, the minimum cost was %e" % ( n_tries, log_like[idx] ))
-        self._set_params ( params[idx])
+        self._set_params ( params[idx], gpu)
         return (log_like[idx], params[idx] )
 
     def predict ( self, testing, do_deriv=True, do_unc=True ):
