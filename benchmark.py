@@ -118,13 +118,12 @@ def test_gpu2():
     print(logdetQ)
 
 if __name__ == "__main__":
-    size = 10
-    d = 10
+    size = 500
+    d = 50
     train_x = random.uniform(-5, 10, d * size).reshape(size, d)
     train_y = np.apply_along_axis(rosenrock, 1, train_x)
     train_y = (train_y - train_y.mean())/ train_y.std()
 
-    print(train_y)
 
  
     gp = GaussianProcess.GaussianProcess(train_x, train_y)
@@ -133,7 +132,7 @@ if __name__ == "__main__":
     gp.theta = theta
     
     start = time.time()
-    gp._set_params(gp.theta, gpu=True)
+    gp._set_params(gp.theta, gpu=False)
     end = time.time()
     
     invQt1 = gp.invQt
@@ -148,7 +147,7 @@ if __name__ == "__main__":
     gp.theta = theta
     print("CPU time: ")
     start = time.time()
-    gp._set_params(gp.theta, gpu=False)
+    gp._set_params(gp.theta, gpu=True)
     end = time.time()
     print(end - start)
     
@@ -160,8 +159,7 @@ if __name__ == "__main__":
 
 
     print("invQt")
-    print(invQt1)
-    print(invQt2)
+    print(invQt1 - invQt2)
     print("invQ")
     print(np.max(np.abs(invQ1-invQ2)))
     print("Q")

@@ -12,7 +12,7 @@ gpuPrepareLikelihood::gpuPrepareLikelihood(GPREAL *Q_, GPREAL *targets_, int N_)
   //! array passed into the wrapper. 
 
   Q = Q_;
-  targets = targets_;
+//  targets = targets_;
   N = N_;
   logdetQ = 0;
 
@@ -28,11 +28,11 @@ gpuPrepareLikelihood::gpuPrepareLikelihood(GPREAL *Q_, GPREAL *targets_, int N_)
   magma_dmalloc(&dev_targets, N);
   magma_dmalloc(&dev_invQt, N);
 
-/*  targets = (GPREAL *)malloc(N * sizeof(GPREAL)); 
+  targets = (GPREAL *)malloc(N * sizeof(GPREAL)); 
   for (int i = 0; i < N; ++i)
     targets[i] = targets_[i];
 
-  Q = (GPREAL *)malloc(N * N * sizeof(GPREAL));
+/*  Q = (GPREAL *)malloc(N * N * sizeof(GPREAL));
   for (int i = 0; i < N; ++i)
     Q[i] = Q_[i];
 */
@@ -47,7 +47,8 @@ gpuPrepareLikelihood::~gpuPrepareLikelihood(){
 
   free(invQ);
   free(invQt);
-  free(targets);
+//  free(targets);
+//  free(Q);
   //! finalize magam
   magma_queue_destroy(queue);
   magma_finalize(); 
@@ -56,11 +57,6 @@ gpuPrepareLikelihood::~gpuPrepareLikelihood(){
 
 
 void gpuPrepareLikelihood::gpu_cholesky() {
-  for(int i = 0; i < N; ++i)
-    std::cout << Q[i] << ", "; 
-  std::cout << std::endl; 
-
-
   magma_dsetmatrix(N, N, Q, N, dev_Q, N, queue);
   magma_dpotrf_gpu(MagmaLower, N, dev_Q, N, &info);
 
@@ -94,8 +90,6 @@ void gpuPrepareLikelihood::gpu_cholesky() {
   magma_dsymv(MagmaLower, N, 1, dev_Q, N, dev_targets, 1,
       0, dev_invQt, 1, queue);
   magma_dgetvector(N, dev_invQt, 1, invQt, 1, queue);
-
-
 }
 
 
