@@ -49,7 +49,7 @@ def test_rosenrock():
 
 
 def test_rosenrock_gp():
-    size = 1000
+    size = 100
     d = 50
     train_x = random.uniform(-5, 10, d * size).reshape(size, d)
     train_y = np.apply_along_axis(rosenrock, 1, train_x)
