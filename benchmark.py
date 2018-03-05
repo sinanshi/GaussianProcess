@@ -17,37 +17,27 @@ def rosenrock (x):
 import time
 
 def test_rosenrock_gp():
-    size = 500
-    d = 70
+    size = 30
+    d = 5
     train_x = random.uniform(-5, 10, d * size).reshape(size, d)
     train_y = np.apply_along_axis(rosenrock, 1, train_x)
-#    print(train_y.mean())
-#    print(train_y.std())
     train_y = (train_y - train_y.mean())/ train_y.std() 
-    #    print(train_y)
     
-
     gp = GaussianProcess.GaussianProcess(train_x, train_y)
-    #    
-#    import cProfile, pstats
-#    from io import StringIO
-#    pr = cProfile.Profile()
-#    pr.enable()
-#    gp.learn_hyperparameters(n_tries=1)
+
     start = time.time()
-    gp.learn_hyperparameters(n_tries=1, gpu=True)
+    print(gp.learn_hyperparameters(n_tries=2, gpu=True))
     end = time.time()
     print("GPU time: ")
     print(end - start)
     
+    gp = GaussianProcess.GaussianProcess(train_x, train_y)
     print("CPU time: ")
     start = time.time()
-    gp.learn_hyperparameters(n_tries=1, gpu=False)
+    print(gp.learn_hyperparameters(n_tries=2, gpu=False))
     end = time.time()
     print(end - start)
 
-    
-    
 #    print("gpu")
 #
 #    for i in range(10):
@@ -117,9 +107,8 @@ def test_gpu2():
     print(2.0 * np.sum ( np.log ( np.diag ( L ))))
     print(logdetQ)
 
-if __name__ == "__main__":
-    size = 500
-    d = 50
+
+def test_gpu_set_param(size, d):
     train_x = random.uniform(-5, 10, d * size).reshape(size, d)
     train_y = np.apply_along_axis(rosenrock, 1, train_x)
     train_y = (train_y - train_y.mean())/ train_y.std()
@@ -140,16 +129,14 @@ if __name__ == "__main__":
     Z1 = gp.Z
     Q1=gp.Q
     logdetQ1 = gp.logdetQ
-    print("GPU time: ")
-    print(end - start)
+    cpu_time = end - start
 
     gp = GaussianProcess.GaussianProcess(train_x, train_y)
     gp.theta = theta
-    print("CPU time: ")
     start = time.time()
     gp._set_params(gp.theta, gpu=True)
     end = time.time()
-    print(end - start)
+    gpu_time = end - start
     
     invQt2 = gp.invQt
     invQ2 = gp.invQ
@@ -158,15 +145,31 @@ if __name__ == "__main__":
     logdetQ2 = gp.logdetQ
 
 
-    print("invQt")
-    print(invQt1 - invQt2)
-    print("invQ")
-    print(np.max(np.abs(invQ1-invQ2)))
-    print("Q")
-    print(Q2 - Q1)
-    print("Z")
-    print(Z2 - Z1)
-    print("lgodet")
-    print(logdetQ2 - logdetQ1)
+    print(str(size) + ', ' + 
+          str(d) + ', ' + 
+          str(cpu_time) + ', ' +
+          str(gpu_time) + ', ' +
+          str(cpu_time / gpu_time) + ', ' +
+          str(np.max(np.abs(invQt1 - invQt2))) + ', ' +
+          str(np.max(np.abs(invQ1 - invQ2)))+ ', ' +
+          str(logdetQ2 - logdetQ1))
 
 
+
+if __name__ == "__main__":
+    for i in xrange(3):
+        for j in xrange(5):
+            test_gpu_set_param(100, 50 * (j + 1))
+            test_gpu_set_param(200, 50 * (j + 1))
+            test_gpu_set_param(400, 50* (j + 1))
+            test_gpu_set_param(800, 50* (j + 1))
+            test_gpu_set_param(1600, 50* (j + 1))
+            test_gpu_set_param(3200, 50* (j + 1))
+            test_gpu_set_param(6400, 50* (j + 1))
+
+#    test_gpu_set_param(500, 50)
+#    test_gpu_set_param(1000, 100)
+#    test_gpu_set_param(2000, 100)
+#    test_rosenrock_gp()
+#    for i in np
+#    test_gpu_set_param()
