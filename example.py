@@ -16,32 +16,33 @@ def rosenbrock (x):
 
 
 def test_rosenbrock_gp(size, d):
-    
-#    size = 30 # problem size
-#    d = 5 # number of variables
 
     # The training dataset created from rosenbrock function
     train_x = random.uniform(-5, 10, d * size).reshape(size, d)
     train_y = np.apply_along_axis(rosenbrock, 1, train_x)
     train_y = (train_y - train_y.mean())/ train_y.std() 
     
+    # The random input
     input_ = random.uniform(-5, 10, d * size).reshape(size, d)
-    #
+    
+    # Initialise GP
     gp = GaussianProcess.GaussianProcess(train_x, train_y)
     
+    # Learn hyperparameters with CPU 
     start = time.time()
     theta_min = gp.learn_hyperparameters(n_tries=2, gpu=False)
     end = time.time()
     cpu_time = end - start
-
-
-
-    start = time.time()
+    # Predict
     pred_mu_cpu, pred_var, par_dev = gp.predict(input_)
+   
+
+    # Learn hyperparameters with GPU
+    start = time.time()
+    theta_min = gp.learn_hyperparameters(n_tries=2, gpu=True)
     end = time.time()
     gpu_time = end - start
-   
-    theta_min = gp.learn_hyperparameters(n_tries=2, gpu=True)
+    # Predict
     pred_mu_gpu, pred_var, par_dev = gp.predict(input_)
 
 
