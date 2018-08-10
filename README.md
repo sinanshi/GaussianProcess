@@ -29,3 +29,6 @@ Install the python package
 cd GaussianProcess
 python setup.py install
 ```
+
+# Examples 
+See example.py 

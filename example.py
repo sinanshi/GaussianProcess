@@ -25,8 +25,8 @@ def test_rosenbrock_gp(size, d):
     # The random input
     input_ = random.uniform(-5, 10, d * size).reshape(size, d)
     
-    # Initialise GP
-    gp = GaussianProcess.GaussianProcess(train_x, train_y)
+    # Initialise GP 
+    gp = GaussianProcess.GaussianProcess(train_x, train_y, tau=1)
     
     # Learn hyperparameters with CPU 
     start = time.time()
