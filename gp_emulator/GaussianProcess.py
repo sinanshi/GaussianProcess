@@ -96,8 +96,8 @@ class GaussianProcess:
         self.Q = self.Z +\
             self.tau * exp_theta[self.D+1]*np.eye ( self.n )
 
-        gpu_likelihood = gpugp.pygpulike(self.Q.astype(np.float32), 
-                                         np.array(self.targets).astype((np.float32)))
+        gpu_likelihood = gpugp.pygpulike(self.Q, 
+                                         np.array(self.targets))
         self.invQ, self.invQt, self.logdetQ = gpu_likelihood.cholesky()
 
     def loglikelihood ( self, theta, gpu=False):

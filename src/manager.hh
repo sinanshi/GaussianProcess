@@ -9,7 +9,7 @@
 #include <iostream>
 using namespace std;
 
-#define GPREAL float
+#define GPREAL double
 
 class gpuPrepareLikelihood {
   private:

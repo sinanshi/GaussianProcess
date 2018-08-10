@@ -18,6 +18,17 @@ def find_in_path(name, path):
     return None
 
 
+def locate_magma():
+    if 'MAGMAHOME' in os.environ:
+        home = os.environ['MAGMAHOME']
+        magmaconfig = {'home': home,
+                        'include': pjoin(home, 'include'), 
+                        'lib': pjoin(home, 'lib')}
+        return magmaconfig
+    else: 
+        raise EnvironmentError('Magma libarary could not be found, please set $MAGMAHOME')
+
+
 def locate_cuda():
     """Locate the CUDA environment on the system
 
@@ -42,7 +53,7 @@ def locate_cuda():
 
     cudaconfig = {'home':home, 'nvcc':nvcc,
                   'include': pjoin(home, 'include'),
-                  'lib': pjoin(home, 'lib')} 
+                  'lib': pjoin(home, 'lib64')} 
     for k, v in iteritems(cudaconfig):
         if not os.path.exists(v):
             raise EnvironmentError('The CUDA %s path could not be located in %s' % (k, v))
@@ -97,7 +108,7 @@ class custom_build_ext(build_ext):
 
 
 CUDA = locate_cuda()
-
+MAGMA = locate_magma()
 # Obtain the numpy include directory.  This logic works across numpy versions.
 try:
     numpy_include = numpy.get_include()
@@ -110,15 +121,15 @@ ext = Extension('gpugp',
                 library_dirs=[CUDA['lib']],
                 libraries=['cudart', 'magma'],
                 language='c++',
-                runtime_library_dirs=[CUDA['lib'], "magma-2.3.0/lib"],
+#                runtime_library_dirs=[CUDA['lib'], "/jmain01/home/JAD013/sxg01/sxs32-sxg01/magma/lib"], 
+                runtime_library_dirs=[CUDA['lib'], MAGMA['lib']], 
                 # this syntax is specific to this build system
                 # we're only going to use certain compiler args with nvcc and not with gcc
                 # the implementation of this trick is in customize_compiler() below
                 extra_compile_args={'gcc': [],
                                     'nvcc': ['-arch=sm_30', '--ptxas-options=-v', '-c', 
                                              '--compiler-options', "'-fPIC'"]},
-                include_dirs = [numpy_include, CUDA['include'], 'src', 'magma-2.3.0/include'])
-
+                include_dirs = [numpy_include, CUDA['include'], 'src', MAGMA['include']])
 
 
 setup(name='gp_emulator',
