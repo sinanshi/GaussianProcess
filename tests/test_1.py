@@ -58,7 +58,7 @@ def test_rosenrock_gp():
     train_y = (train_y - train_y.mean())/ train_y.std() 
     #    print(train_y)
 
-    gp = GaussianProcess.GaussianProcess(train_x, train_y)
+    gp = GaussianProcess.GaussianProcess(train_x, train_y, 1)
     #    
 #    import cProfile, pstats
 #    from io import StringIO

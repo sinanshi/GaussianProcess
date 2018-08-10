@@ -31,7 +31,7 @@ class GaussianProcess:
     functions ought to be possible and easy to implement.
     
     """
-    def __init__ ( self, inputs, targets ):
+    def __init__ ( self, inputs, targets, tau = 1):
         """The inputs are the input vectors, whereas the targets are the
         emulated model outputs.
 
@@ -48,6 +48,8 @@ class GaussianProcess:
         self.inputs = inputs
         self.targets = targets
         ( self.n, self.D ) = self.inputs.shape
+        self.tau = tau
+
     def _prepare_likelihood ( self ):
         """
         This method precalculates matrices and stuff required for the i
@@ -66,7 +68,7 @@ class GaussianProcess:
                               np.tile( self.inputs[:, d], (self.n, 1)).T))**2
         self.Z = exp_theta[self.D]*np.exp ( -0.5*self.Z)
         self.Q = self.Z +\
-            exp_theta[self.D+1]*np.eye ( self.n )
+            self.tau * exp_theta[self.D+1] * np.eye ( self.n )
         L = np.linalg.cholesky ( self.Q )
         self.invQ = np.linalg.inv(L.T).dot( np.linalg.inv(L) )
         #self.invQ = np.linalg.inv ( self.Q )
@@ -92,7 +94,7 @@ class GaussianProcess:
                               np.tile( self.inputs[:, d], (self.n, 1)).T))**2
         self.Z = exp_theta[self.D]*np.exp ( -0.5*self.Z)
         self.Q = self.Z +\
-            exp_theta[self.D+1]*np.eye ( self.n )
+            self.tau * exp_theta[self.D+1]*np.eye ( self.n )
 
         gpu_likelihood = gpugp.pygpulike(self.Q.astype(np.float32), 
                                          np.array(self.targets).astype((np.float32)))
